@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { SERVICES } from '@/lib/data/services'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 // 타입 정의
 export interface Patient {
@@ -238,11 +239,75 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       status: 'active' as const
     }
     setPatients(prev => [...prev, newPatient])
+
+    // Supabase에도 저장 (비동기로 처리)
+    if (isSupabaseConfigured()) {
+      const saveToSupabase = async () => {
+        try {
+          const { error } = await supabase
+            .from('patients')
+            .upsert({
+              name: newPatient.name,
+              phone: newPatient.phone,
+              email: newPatient.email || null,
+              birth_date: newPatient.birthDate || null,
+              registration_date: newPatient.registrationDate,
+              last_visit: newPatient.lastVisit || null,
+              total_visits: newPatient.totalVisits,
+              total_spent: newPatient.totalSpent,
+              favorite_services: newPatient.favoriteServices || [],
+              notes: newPatient.notes || null,
+              status: newPatient.status,
+              membership: newPatient.membership || 'basic',
+              visit_source: newPatient.visitSource || null
+            }, { onConflict: 'phone' })
+
+          if (error) {
+            console.error('Failed to save patient to Supabase:', error)
+          }
+        } catch (error) {
+          console.error('Error saving to Supabase:', error)
+        }
+      }
+      saveToSupabase()
+    }
+
     return newPatient
   }
 
   const updatePatient = (id: string, updates: Partial<Patient>) => {
     setPatients(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
+
+    // Supabase에도 업데이트 (비동기로 처리)
+    if (isSupabaseConfigured()) {
+      const updateSupabase = async () => {
+        try {
+          const patient = patients.find(p => p.id === id)
+          if (patient) {
+            const { error } = await supabase
+              .from('patients')
+              .update({
+                name: updates.name || patient.name,
+                email: updates.email !== undefined ? updates.email : patient.email,
+                notes: updates.notes !== undefined ? updates.notes : patient.notes,
+                status: updates.status || patient.status,
+                membership: updates.membership || patient.membership,
+                last_visit: updates.lastVisit || patient.lastVisit,
+                total_visits: updates.totalVisits !== undefined ? updates.totalVisits : patient.totalVisits,
+                total_spent: updates.totalSpent !== undefined ? updates.totalSpent : patient.totalSpent
+              })
+              .eq('phone', patient.phone)
+
+            if (error) {
+              console.error('Failed to update patient in Supabase:', error)
+            }
+          }
+        } catch (error) {
+          console.error('Error updating patient in Supabase:', error)
+        }
+      }
+      updateSupabase()
+    }
   }
 
   const deletePatient = (id: string) => {
@@ -260,11 +325,100 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       paymentStatus: appointment.paymentStatus || 'pending'
     }
     setAppointments(prev => [...prev, newAppointment])
+
+    // Supabase에도 저장 (비동기로 처리)
+    if (isSupabaseConfigured()) {
+      const saveToSupabase = async () => {
+        try {
+          // 먼저 환자 ID 찾기
+          const patient = patients.find(p => p.id === appointment.patientId)
+          if (patient) {
+            const { data: dbPatients } = await supabase
+              .from('patients')
+              .select('id')
+              .eq('phone', patient.phone)
+              .single()
+
+            if (dbPatients) {
+              const { error } = await supabase
+                .from('appointments')
+                .insert({
+                  patient_id: dbPatients.id,
+                  patient_name: newAppointment.patientName,
+                  phone: newAppointment.phone,
+                  service_id: newAppointment.serviceId,
+                  service_name: newAppointment.serviceName,
+                  appointment_date: newAppointment.date,
+                  appointment_time: newAppointment.time,
+                  duration: newAppointment.duration,
+                  price: newAppointment.price,
+                  status: newAppointment.status,
+                  notes: newAppointment.notes || null,
+                  addon_백옥: newAppointment.addOns?.백옥 || false,
+                  addon_백옥더블: newAppointment.addOns?.백옥더블 || false,
+                  addon_가슴샘: newAppointment.addOns?.가슴샘 || false,
+                  addon_강력주사: newAppointment.addOns?.강력주사 || false,
+                  package_type: newAppointment.packageType || 'single',
+                  payment_status: newAppointment.paymentStatus || 'pending'
+                })
+
+              if (error) {
+                console.error('Failed to save appointment to Supabase:', error)
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error saving appointment to Supabase:', error)
+        }
+      }
+      saveToSupabase()
+    }
+
     return newAppointment
   }
 
   const updateAppointment = (id: string, updates: Partial<Appointment>) => {
     setAppointments(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a))
+
+    // Supabase에도 업데이트 (비동기로 처리)
+    if (isSupabaseConfigured()) {
+      const updateSupabase = async () => {
+        try {
+          const appointment = appointments.find(a => a.id === id)
+          if (appointment) {
+            // 환자 정보로 Supabase appointment 찾기
+            const patient = patients.find(p => p.id === appointment.patientId)
+            if (patient) {
+              const { data: dbPatient } = await supabase
+                .from('patients')
+                .select('id')
+                .eq('phone', patient.phone)
+                .single()
+
+              if (dbPatient) {
+                const { error } = await supabase
+                  .from('appointments')
+                  .update({
+                    status: updates.status || appointment.status,
+                    payment_status: updates.paymentStatus || appointment.paymentStatus,
+                    notes: updates.notes !== undefined ? updates.notes : appointment.notes
+                  })
+                  .eq('patient_id', dbPatient.id)
+                  .eq('appointment_date', appointment.date)
+                  .eq('appointment_time', appointment.time)
+
+                if (error) {
+                  console.error('Failed to update appointment in Supabase:', error)
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error updating appointment in Supabase:', error)
+        }
+      }
+      updateSupabase()
+    }
   }
 
   const completeAppointment = (id: string) => {
@@ -385,6 +539,29 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return [...prev, revenue]
       }
     })
+
+    // Supabase에도 저장 (비동기로 처리)
+    if (isSupabaseConfigured()) {
+      const saveToSupabase = async () => {
+        try {
+          const { error } = await supabase
+            .from('revenues')
+            .upsert({
+              date: revenue.date,
+              iv_revenue: revenue.ivRevenue,
+              endoscopy_revenue: revenue.endoscopyRevenue,
+              total_revenue: revenue.totalRevenue
+            }, { onConflict: 'date' })
+
+          if (error) {
+            console.error('Failed to save revenue to Supabase:', error)
+          }
+        } catch (error) {
+          console.error('Error saving revenue to Supabase:', error)
+        }
+      }
+      saveToSupabase()
+    }
   }
 
   const getRevenueByDate = (date: string) => {
