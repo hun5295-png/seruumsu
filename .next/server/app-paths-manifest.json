@@ -1,0 +1,7 @@
+{
+  "/page": "app/page.js",
+  "/test-supabase/page": "app/test-supabase/page.js",
+  "/staff/reception/page": "app/staff/reception/page.js",
+  "/staff/daily-input/page": "app/staff/daily-input/page.js",
+  "/staff/revenue-input/page": "app/staff/revenue-input/page.js"
+}
