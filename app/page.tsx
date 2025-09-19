@@ -17,21 +17,24 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
+    // 임시로 하드코딩된 계정만 사용 (Supabase Auth 사용자 등록 전까지)
+    if (loginType === 'admin' && email === 'admin@seroum.com' && password === 'admin1234') {
+      toast.success('관리자 로그인 성공!')
+      router.push('/dashboard')
+    } else if (loginType === 'staff' && email === 'staff@seroum.com' && password === 'staff1234') {
+      toast.success('직원 로그인 성공!')
+      router.push('/staff')
+    } else {
+      const hint = loginType === 'admin'
+        ? '(admin@seroum.com / admin1234)'
+        : '(staff@seroum.com / staff1234)'
+      toast.error(`로그인에 실패했습니다. ${hint}`)
+    }
+    setIsLoading(false)
+
+    /* Supabase Auth 사용자 등록 후 활성화
     if (!isSupabaseConfigured()) {
-      // Supabase가 설정되지 않은 경우 테스트 로그인
-      if (loginType === 'admin' && email === 'admin@seroum.com' && password === 'admin1234') {
-        toast.success('관리자 로그인 성공!')
-        router.push('/dashboard')
-      } else if (loginType === 'staff' && email === 'staff@seroum.com' && password === 'staff1234') {
-        toast.success('직원 로그인 성공!')
-        router.push('/staff')
-      } else {
-        const hint = loginType === 'admin'
-          ? '(admin@seroum.com / admin1234)'
-          : '(staff@seroum.com / staff1234)'
-        toast.error(`로그인에 실패했습니다. ${hint}`)
-      }
-      setIsLoading(false)
+      // 위의 하드코딩된 로그인 로직
       return
     }
 
@@ -52,6 +55,7 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+    */
   }
 
   return (
