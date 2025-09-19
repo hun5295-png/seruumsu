@@ -3,12 +3,11 @@
 import { useState } from 'react'
 import { Calendar, Clock, User, Phone, CheckCircle, XCircle, AlertCircle, Plus, X } from 'lucide-react'
 import { useData } from '@/lib/context/DataContext'
-import type { Appointment } from '@/lib/context/DataContext'
 import { SERVICES } from '@/lib/data/services'
 import toast from 'react-hot-toast'
 
 export default function AppointmentsPage() {
-  const { appointments: dataAppointments, addAppointment, completeAppointment, cancelAppointment, getAppointmentsByDate, patients } = useData()
+  const { appointments: dataAppointments, addAppointment, completeAppointment, cancelAppointment, getAppointmentsByDate, patients, calculateServicePrice } = useData()
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [showAddModal, setShowAddModal] = useState(false)
 
@@ -215,8 +214,8 @@ function AppointmentModal({ onClose, onSave, patients }: {
     price: 0,
     status: 'confirmed' as const,
     notes: '',
-    packageType: 'single' as const,
-    paymentStatus: 'pending' as const,
+    packageType: 'single' as 'single' | '4times' | '8times',
+    paymentStatus: 'pending' as 'pending' | 'paid',
     addOns: {
       백옥: false,
       백옥더블: false,

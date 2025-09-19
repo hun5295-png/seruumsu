@@ -44,7 +44,7 @@ export class DataMigrationService {
     try {
       const backupData = {
         timestamp: new Date().toISOString(),
-        data: {}
+        data: {} as Record<string, any>
       }
 
       // localStorage에서 기존 데이터 가져오기

@@ -151,7 +151,6 @@ export default function CouponsPage() {
                           <Copy className="w-4 h-4" />
                         </button>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{coupon.name}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -332,17 +331,6 @@ function CouponModal({ mode, coupon, onClose, onSave }: {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">쿠폰명 *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="신규 가입 환영 쿠폰"
-              required
-            />
-          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>

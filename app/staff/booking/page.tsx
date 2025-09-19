@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Calendar, Clock, User, Phone, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -20,7 +20,7 @@ const timeSlots = [
   '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30'
 ]
 
-export default function BookingPage() {
+function BookingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const preSelectedService = searchParams.get('service')
@@ -408,5 +408,13 @@ export default function BookingPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BookingContent />
+    </Suspense>
   )
 }

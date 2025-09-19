@@ -112,7 +112,7 @@ export default function MarketingPage() {
         value: currentPeriodPatients.length > 0 ?
           (currentPeriodPatients.filter(p => p.totalVisits > 0).length / currentPeriodPatients.length) * 100 : 0,
         change: 0,
-        trend: 'neutral' as const
+        trend: 'up' as const
       },
       avgCustomerValue: {
         value: currentAvgValue,

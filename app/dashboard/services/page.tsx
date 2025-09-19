@@ -6,6 +6,7 @@ import { formatCurrency, formatTime } from '@/lib/utils/format'
 import { SERVICE_CATEGORIES, SERVICES } from '@/lib/data/services'
 import ServiceModal from '@/components/features/ServiceModal'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import toast from 'react-hot-toast'
 
 interface Service {
   id: string
@@ -48,8 +49,8 @@ export default function ServicesPage() {
         base_price: service.basePrice,
         description: service.description,
         effects: service.description,
-        package_4_price: service.package4Price || null,
-        package_8_price: service.package8Price || null,
+        package_4_price: service.package4Price || undefined,
+        package_8_price: service.package8Price || undefined,
         is_active: service.isActive
       }))
       setServices(formattedServices)

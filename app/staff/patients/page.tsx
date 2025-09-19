@@ -8,7 +8,7 @@ import { useData } from '@/lib/context/DataContext'
 import { useRouter } from 'next/navigation'
 
 export default function PatientsPage() {
-  const { patients, getPatientAppointments, getPatientStats } = useData()
+  const { patients, getPatientAppointments, getPatientStats, updatePatient } = useData()
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPatient, setSelectedPatient] = useState<any>(null)

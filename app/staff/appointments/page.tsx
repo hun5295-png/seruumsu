@@ -189,7 +189,7 @@ export default function AppointmentsPage() {
     const dayOfWeek = startOfWeek.getDay()
     startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek)
 
-    const weekDays = []
+    const weekDays: Date[] = []
     const weekDayNames = ['일', '월', '화', '수', '목', '금', '토']
 
     for (let i = 0; i < 7; i++) {
@@ -198,7 +198,7 @@ export default function AppointmentsPage() {
       weekDays.push(date)
     }
 
-    const timeSlots = []
+    const timeSlots: string[] = []
     for (let hour = 9; hour < 19; hour++) {
       timeSlots.push(`${String(hour).padStart(2, '0')}:00`)
     }
@@ -286,7 +286,7 @@ export default function AppointmentsPage() {
     const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const dayAppointments = getAppointmentsForDate(dateString).sort((a, b) => a.time.localeCompare(b.time))
 
-    const timeSlots = []
+    const timeSlots: string[] = []
     for (let hour = 9; hour < 19; hour++) {
       for (let min = 0; min < 60; min += 30) {
         const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`
@@ -471,7 +471,7 @@ export default function AppointmentsPage() {
                 .sort((a, b) => a.time.localeCompare(b.time))
 
               // 시간대 생성 (9:00 - 18:30)
-              const timeSlots = []
+              const timeSlots: string[] = []
               for (let hour = 9; hour < 19; hour++) {
                 for (let min = 0; min < 60; min += 30) {
                   const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`
@@ -703,7 +703,7 @@ function NewAppointmentForm({ onClose, onSave, patients, initialDate }: {
 
     // 환자의 packages 필드에서 직접 가져오기
     if (selectedPatient.packages && selectedPatient.packages.length > 0) {
-      return selectedPatient.packages.map(pkg => {
+      return selectedPatient.packages.map((pkg: any) => {
         const service = SERVICES.find(s => s.id === pkg.serviceId)
         return {
           serviceId: pkg.serviceId,
@@ -712,7 +712,7 @@ function NewAppointmentForm({ onClose, onSave, patients, initialDate }: {
           totalCount: pkg.totalCount,
           remainingCount: pkg.remainingCount
         }
-      }).filter(pkg => pkg.remainingCount > 0)
+      }).filter((pkg: any) => pkg.remainingCount > 0)
     }
 
     // packages 필드가 없으면 예약 내역에서 패키지 구매 정보 추출 (하위 호환성)

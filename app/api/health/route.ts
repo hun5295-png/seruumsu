@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server'
-import { testConnection } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    // Supabase 연결 테스트
-    const dbResult = await testConnection()
+    // 빌드 타임에는 건너뛰기
+    const isConfigured = isSupabaseConfigured()
+
+    let dbResult = { success: false, message: 'Not configured' }
+
+    // 런타임에만 DB 연결 테스트
+    if (isConfigured) {
+      const { testConnection } = await import('@/lib/supabase/client')
+      dbResult = await testConnection()
+    }
 
     // 시스템 상태 체크
     const status = {

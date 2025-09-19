@@ -424,9 +424,19 @@ export const couponService = {
 
   // 쿠폰 사용
   async use(id: string) {
+    // 먼저 현재 사용 횟수 가져오기
+    const { data: coupon, error: fetchError } = await supabase
+      .from('coupons')
+      .select('usage_count')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    // 사용 횟수 증가
     const { data, error } = await supabase
       .from('coupons')
-      .update({ usage_count: supabase.sql`usage_count + 1` })
+      .update({ usage_count: (coupon?.usage_count || 0) + 1 })
       .eq('id', id)
       .select()
       .single()
@@ -494,7 +504,7 @@ export const statsService = {
     // 오늘 신규 환자
     const { data: newPatients, error } = await supabase
       .from('patients')
-      .select('count(*)')
+      .select('*')
       .eq('registration_date', today)
 
     if (error) throw error
@@ -503,7 +513,7 @@ export const statsService = {
       appointments: appointments.length,
       completedServices: appointments.filter(a => a.status === 'completed').length,
       revenue: revenue?.total_revenue || 0,
-      newPatients: newPatients?.[0]?.count || 0
+      newPatients: newPatients?.length || 0
     }
   },
 
@@ -531,7 +541,7 @@ export const statsService = {
     // 주간 신규 환자
     const { data: newPatients, error: patientsError } = await supabase
       .from('patients')
-      .select('count(*)')
+      .select('*')
       .gte('registration_date', startDate)
       .lte('registration_date', endDate)
 
@@ -541,7 +551,7 @@ export const statsService = {
       appointments: appointments?.length || 0,
       completedServices: appointments?.filter(a => a.status === 'completed').length || 0,
       revenue: revenues?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0,
-      newPatients: newPatients?.[0]?.count || 0
+      newPatients: newPatients?.length || 0
     }
   }
 }

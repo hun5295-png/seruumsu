@@ -116,7 +116,7 @@ export default function ServiceModal({ isOpen, onClose, service }: ServiceModalP
               <label className="label">카테고리</label>
               <select
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as typeof SERVICE_CATEGORIES[number] })}
                 className="input"
               >
                 {SERVICE_CATEGORIES.map(cat => (
