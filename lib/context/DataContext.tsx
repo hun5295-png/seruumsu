@@ -7,6 +7,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 // 타입 정의
 export interface Patient {
   id: string
+  chartNumber?: string  // 차트번호
   name: string
   phone: string
   email: string
@@ -20,6 +21,11 @@ export interface Patient {
   status: 'active' | 'inactive'
   membership?: 'basic' | 'silver' | 'gold' | 'vip'
   visitSource?: '검색' | '직원소개' | '원내광고' | '이벤트메세지' | '내시경실' | '진료' | '지인소개' | '기타'
+  discountRateId?: string  // 할인율 ID
+  discountRateName?: string  // 할인율 이름 (표시용)
+  discountRate?: number  // 할인율 (%)
+  assignedStaffId?: string  // 담당직원 ID
+  assignedStaffName?: string  // 담당직원 이름 (표시용)
   packages?: {
     serviceId: string
     serviceName: string

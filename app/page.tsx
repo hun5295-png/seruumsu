@@ -17,20 +17,53 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // 임시로 하드코딩된 계정만 사용 (Supabase Auth 사용자 등록 전까지)
-    if (loginType === 'admin' && email === 'admin@seroum.com' && password === 'admin1234') {
-      toast.success('관리자 로그인 성공!')
-      router.push('/dashboard')
-    } else if (loginType === 'staff' && email === 'staff@seroum.com' && password === 'staff1234') {
-      toast.success('직원 로그인 성공!')
-      router.push('/staff')
-    } else {
-      const hint = loginType === 'admin'
-        ? '(admin@seroum.com / admin1234)'
-        : '(staff@seroum.com / staff1234)'
-      toast.error(`로그인에 실패했습니다. ${hint}`)
+    try {
+      // Supabase에서 사용자 확인
+      if (isSupabaseConfigured()) {
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .eq('password', password)
+          .eq('is_active', true)
+          .single()
+
+        if (error || !user) {
+          toast.error('이메일 또는 비밀번호가 잘못되었습니다.')
+        } else {
+          // 로그인 성공 - 세션 저장
+          localStorage.setItem('currentUser', JSON.stringify({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+          }))
+
+          if (user.role === 'admin') {
+            toast.success(`환영합니다, ${user.name}님! (관리자)`)
+            router.push('/dashboard')
+          } else {
+            toast.success(`환영합니다, ${user.name}님!`)
+            router.push('/staff')
+          }
+        }
+      } else {
+        // Supabase 미설정시 기본 계정 사용
+        if (loginType === 'admin' && email === 'admin@seroum.com' && password === 'admin1234') {
+          toast.success('관리자 로그인 성공!')
+          router.push('/dashboard')
+        } else if (loginType === 'staff' && email === 'staff@seroum.com' && password === 'staff1234') {
+          toast.success('직원 로그인 성공!')
+          router.push('/staff')
+        } else {
+          toast.error('로그인에 실패했습니다.')
+        }
+      }
+    } catch (error) {
+      toast.error('로그인 중 오류가 발생했습니다.')
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
 
     /* Supabase Auth 사용자 등록 후 활성화
     if (!isSupabaseConfigured()) {

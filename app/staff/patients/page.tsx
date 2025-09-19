@@ -138,25 +138,31 @@ export default function PatientsPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  차트번호
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   환자 정보
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   연락처
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   방문 기록
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  할인/담당
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   누적 매출
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   회원 등급
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  상태
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  방문경로
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   작업
                 </th>
               </tr>
@@ -164,68 +170,85 @@ export default function PatientsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     검색 결과가 없습니다
                   </td>
                 </tr>
               ) : (
                 filteredPatients.map((patient) => (
                   <tr key={patient.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-mono text-gray-900">
+                        {patient.chartNumber || '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                            <User className="w-5 h-5 text-primary-600" />
+                        <div className="flex-shrink-0 h-8 w-8">
+                          <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
+                            <User className="w-4 h-4 text-primary-600" />
                           </div>
                         </div>
-                        <div className="ml-4">
+                        <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900">{patient.name}</div>
-                          <div className="text-sm text-gray-500">{patient.birthDate ? `${calculateAge(patient.birthDate)}세` : ''}</div>
+                          <div className="text-xs text-gray-500">{patient.birthDate ? `${calculateAge(patient.birthDate)}세` : ''}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{patient.phone}</div>
-                      <div className="text-sm text-gray-500">{patient.email}</div>
+                      <div className="text-xs text-gray-500">{patient.email}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{patient.totalVisits}회</div>
                       {patient.lastVisit && (
-                        <div className="text-sm text-gray-500">
-                          {getDaysSinceLastVisit(patient.lastVisit)}일 전 방문
+                        <div className="text-xs text-gray-500">
+                          {getDaysSinceLastVisit(patient.lastVisit)}일 전
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm">
+                        {patient.discountRateName && patient.discountRate ? (
+                          <div className="text-xs text-blue-600">
+                            {patient.discountRateName} ({patient.discountRate}%)
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-400">할인 없음</div>
+                        )}
+                        {patient.assignedStaffName && (
+                          <div className="text-xs text-gray-600 mt-1">
+                            담당: {patient.assignedStaffName}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         ₩{patient.totalSpent.toLocaleString()}
                       </div>
                       {patient.totalVisits > 0 && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-xs text-gray-500">
                           평균 ₩{Math.round(patient.totalSpent / patient.totalVisits).toLocaleString()}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getMembershipColor(patient.totalSpent)}`}>
                         {getMembershipLabel(patient.totalSpent)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        patient.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {patient.status === 'active' ? '활성' : '비활성'}
-                      </span>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-xs text-gray-600">
+                        {patient.visitSource || '-'}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => setSelectedPatient(patient)}
-                        className="text-primary-600 hover:text-primary-900"
+                        className="text-primary-600 hover:text-primary-900 text-sm"
                       >
-                        상세보기
+                        상세
                       </button>
                     </td>
                   </tr>

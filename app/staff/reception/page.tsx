@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useData } from '@/lib/context/DataContext'
 import { SERVICES, SERVICE_CATEGORIES } from '@/lib/data/services'
-import { User, Plus, Check, ChevronRight } from 'lucide-react'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { User, Plus, Check, ChevronRight, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 
@@ -18,23 +19,111 @@ export default function ReceptionPage() {
 
   // 신규 환자 등록
   const [showNewPatient, setShowNewPatient] = useState(false)
+  const [chartNumber, setChartNumber] = useState('')
   const [newPatientName, setNewPatientName] = useState('')
   const [newPatientPhone, setNewPatientPhone] = useState('')
   const [newPatientBirth, setNewPatientBirth] = useState('')
+  const [selectedDiscountId, setSelectedDiscountId] = useState('')
   const [visitSource, setVisitSource] = useState<string>('기타')
+  const [assignedStaffId, setAssignedStaffId] = useState('')
+  const [showServiceModal, setShowServiceModal] = useState(false)
+  const [modalServiceId, setModalServiceId] = useState('')
+
+  // 할인율 목록
+  const [discountRates, setDiscountRates] = useState<any[]>([])
+  // 직원 목록
+  const [staffList, setStaffList] = useState<any[]>([])
 
   const selectedPatient = patients.find(p => p.id === selectedPatientId)
-  const selectedService = SERVICES.find(s => s.id === selectedServiceId)
-  const totalPrice = selectedServiceId ? calculateServicePrice(selectedServiceId, packageType) : 0
+  const selectedService = SERVICES.find(s => s.id === selectedServiceId || s.id === modalServiceId)
+  const selectedDiscount = discountRates.find(d => d.id === selectedDiscountId)
+  const basePrice = selectedServiceId ? calculateServicePrice(selectedServiceId, packageType) : 0
+  const discountAmount = selectedDiscount ? Math.round(basePrice * (selectedDiscount.rate / 100)) : 0
+  const totalPrice = basePrice - discountAmount
+
+  // 데이터 로드
+  useEffect(() => {
+    loadDiscountRates()
+    loadStaffList()
+    generateChartNumber()
+  }, [])
+
+  // 차트번호 생성
+  const generateChartNumber = () => {
+    const date = new Date()
+    const year = date.getFullYear().toString().slice(2)
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+    setChartNumber(`${year}${month}-${random}`)
+  }
+
+  // 할인율 목록 로드
+  const loadDiscountRates = async () => {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('discount_rates')
+          .select('*')
+          .eq('is_active', true)
+          .order('rate')
+
+        if (!error && data) {
+          setDiscountRates(data)
+        }
+      } catch (error) {
+        console.error('할인율 로드 실패:', error)
+      }
+    } else {
+      // 로컬 데이터
+      setDiscountRates([
+        { id: '1', name: '일반', rate: 0 },
+        { id: '2', name: 'VIP 고객', rate: 10 },
+        { id: '3', name: '직원 할인', rate: 20 }
+      ])
+    }
+  }
+
+  // 직원 목록 로드
+  const loadStaffList = async () => {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('role', 'staff')
+          .eq('is_active', true)
+
+        if (!error && data) {
+          setStaffList(data)
+        }
+      } catch (error) {
+        console.error('직원 목록 로드 실패:', error)
+      }
+    } else {
+      // 로컬 데이터 - 현재 로그인한 사용자 정보 사용
+      const currentUser = localStorage.getItem('currentUser')
+      if (currentUser) {
+        const user = JSON.parse(currentUser)
+        setStaffList([{ id: user.id || '1', name: user.name || '직원1' }])
+        setAssignedStaffId(user.id || '1')
+      } else {
+        setStaffList([{ id: '1', name: '직원1' }])
+      }
+    }
+  }
 
   // 신규 환자 등록 처리
   const handleAddPatient = () => {
-    if (!newPatientName || !newPatientPhone || !newPatientBirth) {
+    if (!chartNumber || !newPatientName || !newPatientPhone || !newPatientBirth || !modalServiceId) {
       toast.error('모든 필수 정보를 입력해주세요')
       return
     }
 
+    const selectedStaff = staffList.find(s => s.id === assignedStaffId)
+    const selectedDiscountObj = discountRates.find(d => d.id === selectedDiscountId)
+
     const patient = addPatient({
+      chartNumber,
       name: newPatientName,
       phone: newPatientPhone,
       email: '',
@@ -43,13 +132,20 @@ export default function ReceptionPage() {
       lastVisit: new Date().toISOString().split('T')[0],
       totalVisits: 0,
       totalSpent: 0,
-      favoriteServices: [],
+      favoriteServices: [modalServiceId],
       status: 'active',
-      visitSource: visitSource as any
+      visitSource: visitSource as any,
+      discountRateId: selectedDiscountId,
+      discountRateName: selectedDiscountObj?.name,
+      discountRate: selectedDiscountObj?.rate || 0,
+      assignedStaffId: assignedStaffId,
+      assignedStaffName: selectedStaff?.name
     })
 
     setSelectedPatientId(patient.id)
+    setSelectedServiceId(modalServiceId)  // 선택한 서비스 설정
     setShowNewPatient(false)
+    setShowServiceModal(false)
     setNewPatientName('')
     setNewPatientPhone('')
     setNewPatientBirth('')
@@ -168,36 +264,91 @@ export default function ReceptionPage() {
           {showNewPatient && (
             <div className="mb-4 p-4 border rounded">
               <h3 className="font-medium mb-3">신규 환자 정보</h3>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="이름"
-                  value={newPatientName}
-                  onChange={(e) => setNewPatientName(e.target.value)}
-                  className="w-full px-3 py-2 border rounded"
-                />
-                <input
-                  type="text"
-                  placeholder="전화번호"
-                  value={newPatientPhone}
-                  onChange={(e) => setNewPatientPhone(e.target.value)}
-                  className="w-full px-3 py-2 border rounded"
-                />
-                <input
-                  type="date"
-                  placeholder="생년월일"
-                  value={newPatientBirth}
-                  onChange={(e) => setNewPatientBirth(e.target.value)}
-                  className="w-full px-3 py-2 border rounded"
-                />
-                <select
-                  value={visitSource}
-                  onChange={(e) => setVisitSource(e.target.value)}
-                  className="w-full px-3 py-2 border rounded"
-                >
-                  <option value="기타">방문경로 선택</option>
-                  <option value="검색">온라인 검색</option>
-                  <option value="직원소개">직원 소개</option>
+              <div className="grid grid-cols-2 gap-3">
+                {/* 차트번호 */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">차트번호</label>
+                  <input
+                    type="text"
+                    value={chartNumber}
+                    onChange={(e) => setChartNumber(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                    readOnly
+                  />
+                </div>
+
+                {/* 이름 */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">이름 <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={newPatientName}
+                    onChange={(e) => setNewPatientName(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                </div>
+
+                {/* 전화번호 */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">전화번호 <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={newPatientPhone}
+                    onChange={(e) => setNewPatientPhone(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                </div>
+
+                {/* 생년월일 */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">생년월일 <span className="text-red-500">*</span></label>
+                  <input
+                    type="date"
+                    value={newPatientBirth}
+                    onChange={(e) => setNewPatientBirth(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                </div>
+
+                {/* 수액 선택 */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">수액 선택 <span className="text-red-500">*</span></label>
+                  <button
+                    onClick={() => setShowServiceModal(true)}
+                    className="w-full px-3 py-2 border rounded text-left hover:bg-gray-50"
+                  >
+                    {modalServiceId ? SERVICES.find(s => s.id === modalServiceId)?.name : '선택하세요'}
+                  </button>
+                </div>
+
+                {/* 할인율 */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">할인율</label>
+                  <select
+                    value={selectedDiscountId}
+                    onChange={(e) => setSelectedDiscountId(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  >
+                    <option value="">할인 없음</option>
+                    {discountRates.map(rate => (
+                      <option key={rate.id} value={rate.id}>
+                        {rate.name} ({rate.rate}%)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 방문경로 */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">방문경로</label>
+                  <select
+                    value={visitSource}
+                    onChange={(e) => setVisitSource(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  >
+                    <option value="기타">선택하세요</option>
+                    <option value="검색">온라인 검색</option>
+                    <option value="직원소개">직원 소개</option>
                   <option value="원내광고">원내 광고</option>
                   <option value="이벤트메세지">이벤트 메세지</option>
                   <option value="내시경실">내시경실</option>
@@ -205,12 +356,74 @@ export default function ReceptionPage() {
                   <option value="지인소개">지인 소개</option>
                   <option value="기타">기타</option>
                 </select>
-                <button
-                  onClick={handleAddPatient}
-                  className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
-                >
-                  등록하기
-                </button>
+                </div>
+
+                {/* 담당직원 */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">담당직원</label>
+                  <select
+                    value={assignedStaffId}
+                    onChange={(e) => setAssignedStaffId(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  >
+                    <option value="">선택하세요</option>
+                    {staffList.map(staff => (
+                      <option key={staff.id} value={staff.id}>
+                        {staff.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleAddPatient}
+                className="w-full mt-3 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
+              >
+                환자 등록
+              </button>
+            </div>
+          )}
+
+          {/* 서비스 선택 모달 */}
+          {showServiceModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <h3 className="text-lg font-bold mb-4">수액 선택</h3>
+                <div className="space-y-4">
+                  {Object.entries(SERVICE_CATEGORIES).map(([category, services]) => (
+                    <div key={category}>
+                      <h4 className="font-medium text-gray-700 mb-2">{category}</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {services.map(service => (
+                          <button
+                            key={service.id}
+                            onClick={() => {
+                              setModalServiceId(service.id)
+                              setShowServiceModal(false)
+                            }}
+                            className={`p-3 border rounded text-left hover:bg-primary-50 hover:border-primary-600 ${
+                              modalServiceId === service.id ? 'bg-primary-50 border-primary-600' : ''
+                            }`}
+                          >
+                            <div className="font-medium">{service.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {service.duration}분 / ₩{service.basePrice.toLocaleString()}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-3 mt-4">
+                  <button
+                    onClick={() => setShowServiceModal(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+                  >
+                    닫기
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -334,8 +547,20 @@ export default function ReceptionPage() {
                  packageType === '4times' ? '4회' : '8회'}
               </span>
             </div>
+            {selectedDiscount && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">기본 금액</span>
+                  <span className="font-medium">{basePrice.toLocaleString()}원</span>
+                </div>
+                <div className="flex justify-between text-red-600">
+                  <span className="text-gray-600">할인 ({selectedDiscount.name} - {selectedDiscount.rate}%)</span>
+                  <span className="font-medium">-{discountAmount.toLocaleString()}원</span>
+                </div>
+              </>
+            )}
             <div className="pt-3 border-t flex justify-between">
-              <span className="text-lg font-medium">총 금액</span>
+              <span className="text-lg font-medium">최종 금액</span>
               <span className="text-xl font-bold text-primary-600">
                 {totalPrice.toLocaleString()}원
               </span>
